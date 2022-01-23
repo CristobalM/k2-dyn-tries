@@ -48,19 +48,19 @@ void treeBlock::freeTreeBlock()
 
 
 
-void treeBlock::grow(uint16_t extraNodes)
+void treeBlock::grow(TreeInfo *treeInfo, uint16_t extraNodes)
  {
     //if ((sizeArray[nNodes+extraNodes] + 3)/4 > (maxNodes + 3)/4)    
-       dfuds = (uint16_t *) realloc(dfuds, sizeof(uint16_t)*((sizeArray[nNodes+extraNodes] + 3)/4));
-    maxNodes = 4*((sizeArray[nNodes+extraNodes]+3)/4);
+       dfuds = (uint16_t *) realloc(dfuds, sizeof(uint16_t)*((treeInfo->sizeArray[nNodes+extraNodes] + 3)/4));
+    maxNodes = 4*((treeInfo->sizeArray[nNodes+extraNodes]+3)/4);
  }
 
 
-void treeBlock::shrink(uint16_t deletedNodes)
+void treeBlock::shrink(TreeInfo *treeInfo, uint16_t deletedNodes)
  {
     //if ((sizeArray[nNodes-deletedNodes] + 3)/4 < (maxNodes + 3)/4)
-       dfuds = (uint16_t *) realloc(dfuds, sizeof(uint16_t)*((sizeArray[nNodes-deletedNodes] + 3)/4));
-    maxNodes = 4*((sizeArray[nNodes-deletedNodes]+3)/4); 
+       dfuds = (uint16_t *) realloc(dfuds, sizeof(uint16_t)*((treeInfo->sizeArray[nNodes-deletedNodes] + 3)/4));
+    maxNodes = 4*((treeInfo->sizeArray[nNodes-deletedNodes]+3)/4); 
  }
 
 
@@ -286,14 +286,14 @@ treeNode dummyRootBlockNode(0,0);
 
 
 
-void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t level, 
+void treeBlock::insert(TreeInfo *treeInfo, treeNode node, uint8_t str[], uint64_t length, uint16_t level, 
                        uint64_t maxDepth, uint16_t curFlag)
  {
     treeNode nodeAux = node;
     
-    if (rootDepth </*=*/ L1) Nt = S1;
-    else if (rootDepth <= L2) Nt = S2;
-    else Nt = S3;
+    if (rootDepth </*=*/ L1) treeInfo->Nt = S1;
+    else if (rootDepth <= L2) treeInfo->Nt = S2;
+    else treeInfo->Nt = S3;
     
     if (ptr!=NULL && curFlag < nPtrs && absolutePosition(node) == ((blockPtr *)ptr)[curFlag].flag) {
        // insertion must be carried out in the root of a child block
@@ -305,7 +305,7 @@ void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t l
            
         dfuds[node.first] = dfuds[node.first] | (insertT[cNodeCod][str[0]] << aux);
         
-        ((blockPtr *)ptr)[curFlag].P->insert(dummyRootBlockNode, str, length, level, maxDepth, 0);
+        ((blockPtr *)ptr)[curFlag].P->insert(treeInfo, dummyRootBlockNode, str, length, level, maxDepth, 0);
 
         return;
     }
@@ -321,15 +321,24 @@ void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t l
        return;            
     }
     else 
-    if (nNodes + length - 1 <= maxNodes) {
+    if ( (int)nNodes + (int)length - 1 <= maxNodes) {
+      if( (int)nNodes + (int)length - 1 < 0){
+        printf("underflow length 6\n");
+        exit(1);
+      }
        // there is room in current block for new nodes
                  
        // Se coloca en la posicion donde se insertaran los nuevos descendientes de node
        node = skipChildrenSubtree(node, str[0], level, maxDepth, curFlag);
        
        treeNode origNode, destNode;
-       
-       --length; 
+
+       if(length > 0)
+        --length;
+       else{
+         printf("underflow length\n");
+         exit(1);
+       }
        
        destNode.first =  (nNodes + length - 1)/4;
        destNode.second = (nNodes + length - 1)%4;
@@ -390,11 +399,16 @@ void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t l
     else {
        // there is no room for the new nodes
 
-       if (nNodes + length - 1 <= Nt) { // block can still grow
+       if ((int)nNodes + (int)length - 1 <= treeInfo->Nt) { // block can still grow
           // if the block can still grow, grow it.
-          grow(length-1);
+          if(length > 0)
+            grow(treeInfo, length-1);
+          else{
+            printf("Underflow lenght 2\n");
+            exit(1);
+          }
           // After growing, recursively inserts the node 
-          insert(node, str, length, level, maxDepth, curFlag);
+          insert(treeInfo, node, str, length, level, maxDepth, curFlag);
        
        }
        else {
@@ -406,7 +420,7 @@ void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t l
                    
           // Ahora copio el subarbol seleccionado a un nuevo bloque
           
-          uint16_t *new_dfuds = (uint16_t *)calloc((sizeArray[subTreeSize]+4-1)/4, sizeof(uint16_t));
+          uint16_t *new_dfuds = (uint16_t *)calloc((treeInfo->sizeArray[subTreeSize]+4-1)/4, sizeof(uint16_t));
           
           treeNode destNode(0,0);
           
@@ -489,7 +503,7 @@ void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t l
           treeBlock *new_block = (treeBlock *)malloc(sizeof(treeBlock));
           
           new_block->nNodes = subTreeSize;
-          new_block->maxNodes = sizeArray[subTreeSize]; // OJO con este valor, definir bien
+          new_block->maxNodes = treeInfo->sizeArray[subTreeSize]; // OJO con este valor, definir bien
           new_block->dfuds = new_dfuds; 
           new_block->rootDepth = depthSelectedNode;
           
@@ -561,10 +575,15 @@ void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t l
             ++preorderSelectedNode;
           }
            
-          if (subTreeSize > length)         
-             shrink(subTreeSize-1-length+1);
-          else           
-             shrink(subTreeSize-1);
+          if (subTreeSize > length)  {
+            if((int)subTreeSize-1-(int)length+1 < 0){
+              printf("underflow length 3\n");
+              exit(1);
+            }
+            shrink(treeInfo, subTreeSize-1-length+1);
+          }
+          else
+             shrink(treeInfo, subTreeSize-1);
           nNodes -= (subTreeSize - 1); 
           
           if (!insertionBeforeSelectedTree)
@@ -573,13 +592,13 @@ void treeBlock::insert(treeNode node, uint8_t str[], uint64_t length, uint16_t l
           if (insertionInNewBlock) { 
              // insertion continues in the new block              
             if (isInRoot)
-               insert(insertionNode, str, length, level, maxDepth, curFlag);           
+               insert(treeInfo, insertionNode, str, length, level, maxDepth, curFlag);           
             else              
-               new_block->insert(insertionNode, str, length, level, maxDepth, curFlagNewBlock);
+               new_block->insert(treeInfo, insertionNode, str, length, level, maxDepth, curFlagNewBlock);
           }          
           else
              // insertion continues in the original block
-             insert(insertionNode, str, length, level, maxDepth, curFlag);
+             insert(treeInfo, insertionNode, str, length, level, maxDepth, curFlag);
        }         
     }
  }
@@ -694,7 +713,7 @@ treeNode treeBlock::child(treeBlock *&p, treeNode & node, uint8_t symbol, uint16
 
 
 
-void insertar(treeBlock *root, uint8_t *str, uint64_t length, uint16_t level, uint16_t maxDepth) 
+void insertar(TreeInfo *treeInfo, treeBlock *root, uint8_t *str, uint64_t length, uint16_t level, uint16_t maxDepth) 
  {
     treeBlock *curBlock = root, *curBlockAux;
     uint64_t i;
@@ -719,12 +738,12 @@ void insertar(treeBlock *root, uint8_t *str, uint64_t length, uint16_t level, ui
     
     // inserts str[i..length-1] starting from the current node
     // The new nodes inserted will descend from curNode 
-    curBlock->insert(curNode, &str[i], length-i, level, maxDepth, curFlag);
+    curBlock->insert(treeInfo, curNode, &str[i], length-i, level, maxDepth, curFlag);
     
  }
 
 
-void insertTrie(trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth)
+void insertTrie(TreeInfo *treeInfo,trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth)
  {
     uint64_t i = 0;
     treeBlock *p;
@@ -752,8 +771,12 @@ void insertTrie(trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth)
     }
     else 
        p = (treeBlock*)t->block;
-    
-    insertar(p, &str[i], length-i, i, maxDepth); 
+
+    if(length < i){
+      printf("underflow length 4?\n");
+      exit(1);
+    }
+    insertar(treeInfo, p, &str[i], length-i, i, maxDepth); 
  }
 
 
@@ -801,8 +824,13 @@ bool isEdgeTrie(trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth)
     
     p = (treeBlock*)t->block;
     
-    if (p)
-       return isEdge(p, &str[i], length-i, i, maxDepth); 
+    if (p){
+      if(length < i){
+        printf("underflow length 5\n");
+        exit(1);
+      }
+      return isEdge(p, &str[i], length >= i ? length-i : 0, i, maxDepth);
+    }
     else
        return false; 
  }
@@ -854,7 +882,7 @@ uint64_t sizeTrie(trieNode *t)
 
 
 
-
+/*
 int main() 
  {
     treeBlock B;
@@ -944,7 +972,7 @@ int main()
 
     diff = 0;
     
-    for (uint64_t i = 0; i < 100000000/*nEdges*/; ++i) {
+    for (uint64_t i = 0; i < 100000000; ++i) {
        scanf("%s\n", str);
        for (uint8_t j = 0; j < 23; ++j)
           switch(str[j]) {
@@ -1010,4 +1038,4 @@ int main()
     
     return 0;
  }
-
+*/

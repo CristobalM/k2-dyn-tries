@@ -18,13 +18,6 @@ using namespace std;
 #define OFFSET_TYPE uint8_t
 #define MAX_UINT_16 65535
 
-  // Global table that stores the sizes of the blocks, used for growing them
-  uint16_t *sizeArray; // array of sizes
-
-  // Minimum and maximum block sizes
-  uint16_t N1;
-  uint16_t Nt;
-
 #define S1 64
 #define S2 128
 #define S3 1024
@@ -37,6 +30,13 @@ struct trieNode
     void *block;
     trieNode *children[4];
  };
+
+
+struct TreeInfo {
+  uint16_t *sizeArray;
+  uint16_t N1;
+  uint16_t Nt;
+};
 
 
 typedef std::pair <NODE_TYPE,OFFSET_TYPE> treeNode;
@@ -59,15 +59,15 @@ struct treeBlock
     uint16_t nPtrs;   // number of pointers to child blocks
  
  
-    void insert(treeNode, uint8_t[], uint64_t, uint16_t, uint64_t, uint16_t);
+    void insert(TreeInfo *treeInfo, treeNode, uint8_t[], uint64_t, uint16_t, uint64_t, uint16_t);
     
     treeNode skipChildrenSubtree(treeNode &, uint8_t, uint16_t &, uint16_t, uint16_t &);
     
     treeNode child(treeBlock *&, treeNode &, uint8_t, uint16_t &, uint16_t, uint16_t &);
     
-    void grow(uint16_t extraNodes);
+    void grow(TreeInfo *treeInfo,uint16_t extraNodes);
     
-    void shrink(uint16_t deletedNodes);
+    void shrink(TreeInfo *treeInfo,uint16_t deletedNodes);
     
     treeNode selectSubtree(uint16_t maxDepth, uint16_t & subTreeSize, uint16_t & depthSelectN);
 
@@ -196,5 +196,9 @@ const int8_t insertT[16][4] = {
 /*1110*/ {0xe, 0xe, 0xe, 0xf},
 /*1111*/ {0xf, 0xf, 0xf, 0xf}
 };
+
+
+void insertTrie(TreeInfo *treeInfo,trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth);
+bool isEdgeTrie(trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth);
 
 #endif

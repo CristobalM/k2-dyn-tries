@@ -30,3 +30,5 @@ ${SOURCES_REQUIRED}
 
 add_executable(testUsage1 testUsage1.cpp ${SOURCES})
 add_executable(benchmark1 benchmark1.cpp ${SOURCES})
+add_executable(benchmark1-as benchmark1.cpp ${SOURCES})
+target_compile_options(benchmark1-as PRIVATE -save-temps=obj)

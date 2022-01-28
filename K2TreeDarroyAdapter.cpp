@@ -42,7 +42,7 @@ void K2TreeDarroyAdapter::insert(unsigned long col, unsigned long row) {
     auto mortonCode = convertCoordinatesToMortonCode(col, row, treeDepth);
     // debugPrintMortonCode(col, row, mortonCode);
 
-    insertTrie(treeInfo, t, mortonCode.container, mortonCode.size, treeDepth);
+    insertTrie(treeInfo, t, mortonCode.container, mortonCode.size+1, treeDepth);
 }
 
 bool K2TreeDarroyAdapter::has(unsigned long col, unsigned long row) {

@@ -21,7 +21,7 @@ using namespace std;
 #define S1 64
 #define S2 128
 #define S3 1024
-#define L1 8
+#define L1 0
 #define L2 16
 
 

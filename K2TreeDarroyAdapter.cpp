@@ -49,3 +49,7 @@ bool K2TreeDarroyAdapter::has(unsigned long col, unsigned long row) {
     auto mortonCode = convertCoordinatesToMortonCode(col, row, treeDepth);
     return isEdgeTrie(t, mortonCode.container, mortonCode.size, treeDepth);
 }
+void K2TreeDarroyAdapter::debugPrint() {
+  auto *tBlock = (treeBlock *) t->block;
+  debug_print_block_tree_structure(*tBlock);
+}

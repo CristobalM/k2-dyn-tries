@@ -18,6 +18,7 @@ class K2TreeDarroyAdapter{
 
   void insert(unsigned long col, unsigned long row);
   bool has(unsigned long col, unsigned long row);
+  void debugPrint();
 
 };
 

@@ -201,4 +201,8 @@ const int8_t insertT[16][4] = {
 void insertTrie(TreeInfo *treeInfo,trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth);
 bool isEdgeTrie(trieNode *t, uint8_t *str, uint64_t length, uint16_t maxDepth);
 
+
+void debug_print_block_tree_structure(treeBlock &input_block);
+
+
 #endif

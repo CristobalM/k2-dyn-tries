@@ -35,6 +35,8 @@ static void benchmark1(int size){
   std::cout << "Lookup Benchmark 1 took: " << microseconds << " microseconds, for input size = " << size
   << ", microsecs/point = " << (double)microseconds/(double)size << ", total count: " << count << std::endl;
 
+  k2tree.debugPrint();
+
 }
 
 int main(int argc, char **argv){

@@ -1000,3 +1000,20 @@ int main()
     return 0;
  }
 */
+
+static void print_block_structure(treeBlock &input_block, int block_depth){
+  printf("(%d #nodes, %d #children, %d depth)\n", input_block.nNodes, input_block.nPtrs, block_depth);
+}
+
+static void rec_debug_print(treeBlock &input_block, int block_depth){
+  print_block_structure(input_block, block_depth);
+  for(int i = 0; i < input_block.nPtrs; i++){
+    auto *bPtr = &((blockPtr *) input_block.ptr)[i];
+    rec_debug_print(*bPtr->P, block_depth + 1);
+  }
+}
+
+void debug_print_block_tree_structure(treeBlock &input_block){
+  rec_debug_print(input_block, 0);
+}
+
